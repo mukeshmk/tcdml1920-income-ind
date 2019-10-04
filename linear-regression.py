@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # reading data and handling unknowns
 df = pd.read_csv('tcd ml 2019-20 income prediction training (with labels).csv', na_values={
@@ -14,5 +15,17 @@ df = pd.read_csv('tcd ml 2019-20 income prediction training (with labels).csv', 
         'Body Height [cm]': [],
         'Income in EUR': []
 })
+
+# handling NaN
+# try different methods of interpolate to reduce RMSE
+# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.interpolate.html#pandas.DataFrame.interpolate
+df['Year of Record'] = np.floor(df['Year of Record'].interpolate(method='slinear'))
+df['Gender'].fillna('other', inplace=True)
+df['Age'] = np.floor(df['Age'].interpolate(method='slinear'))
+# different methods of fillna?
+df['Profession'].fillna(method='ffill', inplace=True)
+df['University Degree'].fillna(method='ffill', inplace=True)
+df['Hair Color'].fillna(method='ffill', inplace=True)
+df['Income in EUR'] = df['Income in EUR'].abs()
 
 print(df.head())
