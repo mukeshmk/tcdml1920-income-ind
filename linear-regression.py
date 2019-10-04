@@ -42,4 +42,16 @@ dfOneHotGender = pd.DataFrame(ohe_gender_data, columns=['Gender: '+str(i.strip('
 df = pd.concat([df, dfOneHotGender], axis=1)
 del df['Gender']
 
+ohe_degree = pp.OneHotEncoder(categories='auto', sparse=False)
+ohe_degree_data = ohe_degree.fit_transform(df['University Degree'].values.reshape(len(df['University Degree']), 1))
+dfOneHot = pd.DataFrame(ohe_degree_data, columns=['University Degree: '+str(i.strip('x0123_')) for i in ohe_degree.get_feature_names()])
+df = pd.concat([df, dfOneHot], axis=1)
+del df['University Degree']
+
+ohe_hair = pp.OneHotEncoder(categories='auto', sparse=False)
+ohe_hair_data = ohe_hair.fit_transform(df['Hair Color'].values.reshape(len(df['Hair Color']), 1))
+dfOneHotHair = pd.DataFrame(ohe_hair_data, columns=['Hair Color: '+str(i.strip('x0123_')) for i in ohe_hair.get_feature_names()])
+df = pd.concat([df, dfOneHotHair], axis=1)
+del df['Hair Color']
+
 print(df.head())
