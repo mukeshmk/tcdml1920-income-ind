@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
+from sklearn import linear_model
 from sklearn import preprocessing as pp
+from sklearn.model_selection import train_test_split
 
 # reading data and handling unknowns
 df = pd.read_csv('tcd ml 2019-20 income prediction training (with labels).csv', na_values={
@@ -29,6 +31,14 @@ df['University Degree'].fillna(method='ffill', inplace=True)
 df['Hair Color'].fillna(method='ffill', inplace=True)
 df['Income in EUR'] = df['Income in EUR'].abs()
 
+Y = df['Income in EUR']
+# features being considered for linear regression
+df = df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color', 'Body Height [cm]']]
+# features not considered for linear regression "FOR NOW"
+# Country, Size of City, Profession
+# need to reconsider using features like 'Hair Color', 'Wears Glasses' and 'Body Height [cm]',
+# these might be totally unnecessary features in predicting the income.
+
 # Feature modifications
 
 # Standard Scaling
@@ -54,4 +64,8 @@ dfOneHotHair = pd.DataFrame(ohe_hair_data, columns=['Hair Color: '+str(i.strip('
 df = pd.concat([df, dfOneHotHair], axis=1)
 del df['Hair Color']
 
-print(df.head())
+X_train, X_test, Y_train, Y_test = train_test_split(df, Y, test_size=0.2, random_state=0)
+
+model = linear_model.LinearRegression()
+model.fit(X_train, Y_train);
+y_pred = model.predict(X_test)
