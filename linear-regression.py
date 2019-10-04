@@ -3,6 +3,9 @@ import numpy as np
 from sklearn import linear_model
 from sklearn import preprocessing as pp
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Check-out TF-IDF, word2vec, countvectorizer, OneHotEncoder, labelBinarizer, LabelEncoder, OrdinalEncoder
 
 # reading data and handling unknowns
 df = pd.read_csv('tcd ml 2019-20 income prediction training (with labels).csv', na_values={
@@ -69,3 +72,7 @@ X_train, X_test, Y_train, Y_test = train_test_split(df, Y, test_size=0.2, random
 model = linear_model.LinearRegression()
 model.fit(X_train, Y_train);
 y_pred = model.predict(X_test)
+
+print('Coefficients: \n', model.coef_)
+print("RMSE %.2f" % np.sqrt(mean_squared_error(Y_test, y_pred)))
+print('Variance score: %.2f' % r2_score(Y_test, y_pred))
