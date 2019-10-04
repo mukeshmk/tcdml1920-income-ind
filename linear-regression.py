@@ -67,12 +67,13 @@ dfOneHotHair = pd.DataFrame(ohe_hair_data, columns=['Hair Color: '+str(i.strip('
 df = pd.concat([df, dfOneHotHair], axis=1)
 del df['Hair Color']
 
+# can be modified to used k-fold cross validation
 X_train, X_test, Y_train, Y_test = train_test_split(df, Y, test_size=0.2, random_state=0)
 
 model = linear_model.LinearRegression()
-model.fit(X_train, Y_train);
+model.fit(X_train, Y_train)
 y_pred = model.predict(X_test)
 
 print('Coefficients: \n', model.coef_)
-print("RMSE %.2f" % np.sqrt(mean_squared_error(Y_test, y_pred)))
+print("RMSE: %.2f" % np.sqrt(mean_squared_error(Y_test, y_pred)))
 print('Variance score: %.2f' % r2_score(Y_test, y_pred))
