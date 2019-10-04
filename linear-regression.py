@@ -35,4 +35,11 @@ df['Income in EUR'] = df['Income in EUR'].abs()
 yor_scaler = pp.StandardScaler()
 df['Year of Record'] = yor_scaler.fit_transform(df['Year of Record'].values.reshape(-1, 1))
 
+# One Hot Encoding
+ohe_gender = pp.OneHotEncoder(categories='auto', sparse=False)
+ohe_gender_data = ohe_gender.fit_transform(df['Gender'].values.reshape(len(df['Gender']), 1))
+dfOneHotGender = pd.DataFrame(ohe_gender_data, columns=['Gender: '+str(i.strip('x0123_')) for i in ohe_gender.get_feature_names()])
+df = pd.concat([df, dfOneHotGender], axis=1)
+del df['Gender']
+
 print(df.head())
