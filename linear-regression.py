@@ -1,5 +1,7 @@
+import os
 import pandas as pd
 import numpy as np
+from scipy import stats
 from sklearn import linear_model
 from sklearn import preprocessing as pp
 from sklearn.model_selection import train_test_split
@@ -39,6 +41,17 @@ def dfFillNaN(df):
     return df
 
 
+# Removing outliers using z-score
+def dropNumericalOutliers(df, z_thresh=3):
+    # Constrains will contain `True` or `False` depending on if it is a value below the threshold.
+    constrains = df.select_dtypes(include=[np.number]) \
+        .apply(lambda x: np.abs(stats.zscore(x)) < z_thresh, reduce=False) \
+        .all(axis=1)
+    # Drop (inplace) values set to be rejected
+    df.drop(df.index[~constrains], inplace=True)
+    return df
+
+
 # One Hot Encoding
 def oheFeature(feature, encoder, data, df):
     ohedf = pd.DataFrame(data, columns=[feature + ': ' + str(i.strip('x0123_')) for i in encoder.get_feature_names()])
@@ -51,6 +64,15 @@ df = openAndHandleUnknowns('tcd ml 2019-20 income prediction training (with labe
 
 df = dfFillNaN(df)
 df['Income in EUR'] = df['Income in EUR'].abs()
+
+df = dropNumericalOutliers(df)
+
+# this is a temp hack need to find a proper solution
+# idk why if I am not reloading the data set, df.column.values returns the dropped values
+# this cases issues with ohe as it returns NaN's
+df.to_csv('temp-file.csv', index=False)
+df = pd.read_csv('temp-file.csv')
+os.remove('temp-file.csv')
 
 y = df['Income in EUR']
 # features being considered for linear regression
