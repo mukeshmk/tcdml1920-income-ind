@@ -28,7 +28,7 @@ Handling NaN:
 Feature Modification:
         'Year of Record': Standard Scalar,
         'Gender': One Hot Encoding,
-        'Age': None - being used,
+        'Age': Standard Scalar,
         'Country': None - not being used,
         'Size of City': None - not being used,
         'Profession': None - not being used,
@@ -44,9 +44,9 @@ Current Method of evaluation:
 
 Current coefficients, RMSE and Variance score:
         Coefficients:
-            [ 25041.90669168   1709.93276118   1496.04889764    536.61253846
-                -1335.22446234    840.40625596    494.81820638  -3894.37452275
-                 2843.47042211 -13555.56735231  14606.47145294   -804.58390828
-                 272.12225298   1053.03167021   -520.5700149 ]
+             [ 25041.90669168  27388.56840194   1496.04889764    536.61253846
+              -1335.22446234    840.40625596    494.81820638  -3894.37452275
+               2843.47042211 -13555.56735231  14606.47145294   -804.58390828
+               272.12225298   1053.03167021   -520.5700149 ]
         RMSE: 144191.01
         Variance score: 0.07

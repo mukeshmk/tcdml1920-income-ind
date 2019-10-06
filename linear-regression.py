@@ -66,6 +66,8 @@ df = df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses'
 yor_scalar = pp.StandardScaler()
 df['Year of Record'] = yor_scalar.fit_transform(df['Year of Record'].values.reshape(-1, 1))
 
+age_scalar = pp.StandardScaler()
+df['Age'] = age_scalar.fit_transform(df['Age'].values.reshape(-1, 1))
 
 ohe_gender = pp.OneHotEncoder(categories='auto', sparse=False)
 ohe_gender_data = ohe_gender.fit_transform(df['Gender'].values.reshape(len(df['Gender']), 1))
@@ -97,15 +99,16 @@ sub_df = dfFillNaN(sub_df)
 instance = pd.DataFrame(sub_df['Instance'], columns=['Instance'])
 sub_df = sub_df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color', 'Body Height [cm]']]
 
-sub_df['Year of Record'] = yor_scalar.fit_transform(sub_df['Year of Record'].values.reshape(-1, 1))
+sub_df['Year of Record'] = yor_scalar.transform(sub_df['Year of Record'].values.reshape(-1, 1))
+sub_df['Age'] = age_scalar.transform(sub_df['Age'].values.reshape(-1, 1))
 
 ohe_gender_data = ohe_gender.transform(sub_df['Gender'].values.reshape(len(sub_df['Gender']), 1))
 sub_df = oheFeature('Gender', ohe_gender, ohe_gender_data, sub_df)
 
-ohe_degree_data = ohe_degree.fit_transform(sub_df['University Degree'].values.reshape(len(sub_df['University Degree']), 1))
+ohe_degree_data = ohe_degree.transform(sub_df['University Degree'].values.reshape(len(sub_df['University Degree']), 1))
 sub_df = oheFeature('University Degree', ohe_degree, ohe_degree_data, sub_df)
 
-ohe_hair_data = ohe_hair.fit_transform(sub_df['Hair Color'].values.reshape(len(sub_df['Hair Color']), 1))
+ohe_hair_data = ohe_hair.transform(sub_df['Hair Color'].values.reshape(len(sub_df['Hair Color']), 1))
 sub_df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, sub_df)
 
 y_sub = model.predict(sub_df)
