@@ -55,6 +55,7 @@ def dropNumericalOutliers(df, z_thresh=3):
 # One Hot Encoding
 def oheFeature(feature, encoder, data, df):
     ohedf = pd.DataFrame(data, columns=[feature + ': ' + str(i.strip('x0123_')) for i in encoder.get_feature_names()])
+    ohedf.drop(ohedf.columns[len(ohedf.columns) - 1], axis=1, inplace=True)
     df = pd.concat([df, ohedf], axis=1)
     del df[feature]
     return df
