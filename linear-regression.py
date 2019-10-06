@@ -63,8 +63,8 @@ df = df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses'
 # Feature modifications
 
 # Standard Scaling
-yor_scaler = pp.StandardScaler()
-df['Year of Record'] = yor_scaler.fit_transform(df['Year of Record'].values.reshape(-1, 1))
+yor_scalar = pp.StandardScaler()
+df['Year of Record'] = yor_scalar.fit_transform(df['Year of Record'].values.reshape(-1, 1))
 
 
 ohe_gender = pp.OneHotEncoder(categories='auto', sparse=False)
@@ -89,3 +89,27 @@ y_pred = model.predict(X_test)
 print('Coefficients: \n', model.coef_)
 print("RMSE: %.2f" % np.sqrt(mean_squared_error(y_test, y_pred)))
 print('Variance score: %.2f' % r2_score(y_test, y_pred))
+
+##################################################################################################################
+# Reading unlabeled instances!
+sub_df = openAndHandleUnknowns('tcd ml 2019-20 income prediction test (without labels).csv')
+sub_df = dfFillNaN(sub_df)
+instance = pd.DataFrame(sub_df['Instance'], columns=['Instance'])
+sub_df = sub_df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color', 'Body Height [cm]']]
+
+sub_df['Year of Record'] = yor_scalar.fit_transform(sub_df['Year of Record'].values.reshape(-1, 1))
+
+ohe_gender_data = ohe_gender.transform(sub_df['Gender'].values.reshape(len(sub_df['Gender']), 1))
+sub_df = oheFeature('Gender', ohe_gender, ohe_gender_data, sub_df)
+
+ohe_degree_data = ohe_degree.fit_transform(sub_df['University Degree'].values.reshape(len(sub_df['University Degree']), 1))
+sub_df = oheFeature('University Degree', ohe_degree, ohe_degree_data, sub_df)
+
+ohe_hair_data = ohe_hair.fit_transform(sub_df['Hair Color'].values.reshape(len(sub_df['Hair Color']), 1))
+sub_df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, sub_df)
+
+y_sub = model.predict(sub_df)
+income = pd.DataFrame(y_sub, columns=['Income'])
+ans = instance.join(income)
+
+ans.to_csv('kaggle-output.csv', index=False)
