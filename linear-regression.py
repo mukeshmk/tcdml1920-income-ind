@@ -13,22 +13,22 @@ from sklearn.metrics import mean_squared_error, r2_score
 # reading data and handling unknowns
 def openAndHandleUnknowns(fileName):
     return pd.read_csv(fileName, na_values={
-        'Year of Record': ['#N/A'],
+        'Year of Record': [0, '#N/A', 'unknown'],
         'Gender': [0, '#N/A', 'unknown'],
-        'Age': ['#N/A'],
-        'Country': [],
-        'Size of City': [],
+        'Age': [0, '#N/A', 'unknown'],
+        'Country': ['#N/A', 'unknown'],
+        'Size of City': ['#N/A', 'unknown'],
         'Profession': ['#N/A'],
-        'University Degree': [0, '#N/A'],
-        'Wears Glasses': [],
+        'University Degree': [0, '#N/A', 'unknown'],
+        'Wears Glasses': ['#N/A', 'unknown'],
         'Hair Color': [0, '#N/A', 'Unknown'],
-        'Body Height [cm]': [],
+        'Body Height [cm]': ['#N/A', 'unknown'],
         'Income in EUR': []
     })
 
 
 # handling NaN
-# try different methods of interpolate to reduce RMSE
+# TODO try different methods of interpolate to reduce RMSE
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.interpolate.html#pandas.DataFrame.interpolate
 def dfFillNaN(df):
     df['Year of Record'] = np.floor(df['Year of Record'].interpolate(method='slinear'))
@@ -45,7 +45,7 @@ def dfFillNaN(df):
 def dropNumericalOutliers(df, z_thresh=3):
     # Constrains will contain `True` or `False` depending on if it is a value below the threshold.
     constrains = df.select_dtypes(include=[np.number]) \
-        .apply(lambda x: np.abs(stats.zscore(x)) < z_thresh, reduce=False) \
+        .apply(lambda x: np.abs(stats.zscore(x)) < z_thresh) \
         .all(axis=1)
     # Drop (inplace) values set to be rejected
     df.drop(df.index[~constrains], inplace=True)
@@ -54,6 +54,7 @@ def dropNumericalOutliers(df, z_thresh=3):
 
 # One Hot Encoding
 def oheFeature(feature, encoder, data, df):
+    # data = data[:, 1:]
     ohedf = pd.DataFrame(data, columns=[feature + ': ' + str(i.strip('x0123_')) for i in encoder.get_feature_names()])
     ohedf.drop(ohedf.columns[len(ohedf.columns) - 1], axis=1, inplace=True)
     df = pd.concat([df, ohedf], axis=1)
@@ -68,7 +69,7 @@ df['Income in EUR'] = df['Income in EUR'].abs()
 
 df = dropNumericalOutliers(df)
 
-# this is a temp hack need to find a proper solution
+# TODO this is a temp hack need to find a proper solution
 # idk why if I am not reloading the data set, df.column.values returns the dropped values
 # this cases issues with ohe as it returns NaN's
 df.to_csv('temp-file.csv', index=False)
@@ -77,9 +78,8 @@ os.remove('temp-file.csv')
 
 y = df['Income in EUR']
 # features being considered for linear regression
-df = df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color', 'Body Height [cm]']]
-# features not considered for linear regression "FOR NOW"
-# Country, Size of City, Profession
+df = df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color', 'Body Height [cm]',
+         'Country', 'Size of City', 'Profession']]
 # need to reconsider using features like 'Hair Color', 'Wears Glasses' and 'Body Height [cm]',
 # these might be totally unnecessary features in predicting the income.
 
@@ -92,6 +92,7 @@ df['Year of Record'] = yor_scalar.fit_transform(df['Year of Record'].values.resh
 age_scalar = pp.StandardScaler()
 df['Age'] = age_scalar.fit_transform(df['Age'].values.reshape(-1, 1))
 
+# One Hot Encoding
 ohe_gender = pp.OneHotEncoder(categories='auto', sparse=False)
 ohe_gender_data = ohe_gender.fit_transform(df['Gender'].values.reshape(len(df['Gender']), 1))
 df = oheFeature('Gender', ohe_gender, ohe_gender_data, df)
@@ -100,9 +101,25 @@ ohe_degree = pp.OneHotEncoder(categories='auto', sparse=False)
 ohe_degree_data = ohe_degree.fit_transform(df['University Degree'].values.reshape(len(df['University Degree']), 1))
 df = oheFeature('University Degree', ohe_degree, ohe_degree_data, df)
 
-ohe_hair = pp.OneHotEncoder(categories='auto', sparse=False)
+ohe_hair = pp.OneHotEncoder(categories='auto', sparse=False, handle_unknown='ignore')
 ohe_hair_data = ohe_hair.fit_transform(df['Hair Color'].values.reshape(len(df['Hair Color']), 1))
 df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, df)
+
+# replacing the a small number of least count group values to a common feature 'other'
+o = df.groupby('Country').count().nsmallest(12, 'Age').index
+df['Country'].replace(o.values, 'other', inplace=True)
+
+ohe_country = pp.OneHotEncoder(categories='auto', sparse=False)
+ohe_country_data = ohe_country.fit_transform(df['Country'].values.reshape(len(df['Country']), 1))
+df = oheFeature('Country', ohe_country, ohe_country_data, df)
+
+# replacing the a small number of least count group values to a common feature 'other profession'
+op = df.groupby('Profession').count().nsmallest(12, 'Age').index
+df['Profession'].replace(op.values, 'other profession', inplace=True)
+
+ohe_prof = pp.OneHotEncoder(categories='auto', sparse=False)
+ohe_prof_data = ohe_prof.fit_transform(df['Profession'].values.reshape(len(df['Profession']), 1))
+df = oheFeature('Profession', ohe_prof, ohe_prof_data, df)
 
 # can be modified to used k-fold cross validation
 X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, random_state=0)
@@ -120,7 +137,8 @@ print('Variance score: %.2f' % r2_score(y_test, y_pred))
 sub_df = openAndHandleUnknowns('tcd ml 2019-20 income prediction test (without labels).csv')
 sub_df = dfFillNaN(sub_df)
 instance = pd.DataFrame(sub_df['Instance'], columns=['Instance'])
-sub_df = sub_df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color', 'Body Height [cm]']]
+sub_df = sub_df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color',
+                 'Body Height [cm]', 'Country', 'Size of City', 'Profession']]
 
 sub_df['Year of Record'] = yor_scalar.transform(sub_df['Year of Record'].values.reshape(-1, 1))
 sub_df['Age'] = age_scalar.transform(sub_df['Age'].values.reshape(-1, 1))
@@ -133,6 +151,31 @@ sub_df = oheFeature('University Degree', ohe_degree, ohe_degree_data, sub_df)
 
 ohe_hair_data = ohe_hair.transform(sub_df['Hair Color'].values.reshape(len(sub_df['Hair Color']), 1))
 sub_df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, sub_df)
+
+i = o.values
+# TODO currently values to be replaced are being hard coded - this has to be removed and made dynamic
+i = np.append(i, ['Iraq', 'Iceland', 'Sao Tome & Principe', 'France', 'Cabo Verde', 'Uganda', 'United Kingdom',
+                  'Tanzania', 'Ukraine', 'South Korea', 'Bahamas', 'Luxembourg', 'Italy', 'Vanuatu', 'Saint Lucia',
+                  'South Africa', 'Brunei', 'Turkey', 'Belize', 'Spain', 'Colombia', 'Samoa', 'Kenya', 'Myanmar',
+                  'Maldives', 'Micronesia'])
+sub_df['Country'].replace(i, 'other', inplace=True)
+
+ohe_country_data = ohe_country.transform(sub_df['Country'].values.reshape(len(sub_df['Country']), 1))
+sub_df = oheFeature('Country', ohe_country, ohe_country_data, sub_df)
+
+ip = op.values
+# TODO currently values to be replaced are being hard coded - this has to be removed and made dynamic
+ip = np.append(ip, ['cashier', 'asset management specialist', 'baggage porter', 'certified it administrator', 'actor',
+                    'asset manager', 'administrative office assistant', 'Brewery Manager', 'administrative manager',
+                    'astronomer', 'Blinds Installer', 'administrative staff analyst', 'aerospace engineer',
+                    'account executive ', 'administrative transportation coordinator', 'accountant',
+                    'air & noise pollution inspector', 'accessibility outreach coordinator', 'brokerage clerk',
+                    'Bar Manager', 'account manager', 'clinical case supervisor', 'apparel patternmaker',
+                    'administrative coordinator'])
+sub_df['Profession'].replace(ip, 'other profession', inplace=True)
+
+ohe_prof_data = ohe_prof.transform(sub_df['Profession'].values.reshape(len(sub_df['Profession']), 1))
+sub_df = oheFeature('Profession', ohe_prof, ohe_prof_data, sub_df)
 
 y_sub = model.predict(sub_df)
 income = pd.DataFrame(y_sub, columns=['Income'])

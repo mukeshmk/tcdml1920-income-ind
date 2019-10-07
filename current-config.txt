@@ -27,14 +27,14 @@ Handling NaN:
 
 Feature Modification:
         'Year of Record': Standard Scalar,
-        'Gender': One Hot Encoding,
+        'Gender': One Hot Encoding - dummy variable handled,
         'Age': Standard Scalar,
-        'Country': None - not being used,
-        'Size of City': None - not being used,
-        'Profession': None - not being used,
-        'University Degree': One Hot Encoding,
+        'Country':  One Hot Encoding - a small set of countries are being replaced with 'other' - dummy variable handled,
+        'Size of City': Standard Scalar,
+        'Profession': One Hot Encoding - a small set of professions are being replaced with 'other profession'',
+        'University Degree': One Hot Encoding - dummy variable handled,
         'Wears Glasses': None - being used,
-        'Hair Color': One Hot Encoding,
+        'Hair Color': One Hot Encoding - dummy variable handled,
         'Body Height [cm]': None - being used,
 
         'Income in EUR': Output Value - Contains negative values which have been converted to positive
@@ -44,9 +44,8 @@ Current Method of evaluation:
 
 Current coefficients, RMSE and Variance score:
         Coefficients:
-              [16526.78581544 16666.36129313   499.06553121   327.44951785
-               -1833.26080238   514.05319998  1319.2076024  -2105.65911862
-                1314.31273713 -7857.00226307  8648.34864455  -420.77469845
-                583.66900822  -819.64808626   656.75377649]
-        RMSE: 95080.15
-        Variance score: 0.06
+              [19047.81945381 20134.75572031   270.7702686  ... 15151.55061741
+               11469.24655991  4662.67700687]
+
+        RMSE: 45329.35
+        Variance score: 0.79
