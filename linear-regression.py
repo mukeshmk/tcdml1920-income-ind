@@ -106,16 +106,21 @@ ohe_hair_data = ohe_hair.fit_transform(df['Hair Color'].values.reshape(len(df['H
 df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, df)
 
 # replacing the a small number of least count group values to a common feature 'other'
-o = df.groupby('Country').count().nsmallest(12, 'Age').index
-df['Country'].replace(o.values, 'other', inplace=True)
+
+countryList = df['Country'].unique()
+countryReplaced = df.groupby('Country').count()
+countryReplaced = countryReplaced[countryReplaced['Age'] < 3].index
+df['Country'].replace(countryReplaced, 'other', inplace=True)
 
 ohe_country = pp.OneHotEncoder(categories='auto', sparse=False)
 ohe_country_data = ohe_country.fit_transform(df['Country'].values.reshape(len(df['Country']), 1))
 df = oheFeature('Country', ohe_country, ohe_country_data, df)
 
 # replacing the a small number of least count group values to a common feature 'other profession'
-op = df.groupby('Profession').count().nsmallest(12, 'Age').index
-df['Profession'].replace(op.values, 'other profession', inplace=True)
+professionList = df['Profession'].unique()
+professionReplaced = df.groupby('Profession').count()
+professionReplaced = professionReplaced[professionReplaced['Age'] < 3].index
+df['Profession'].replace(professionReplaced, 'other profession', inplace=True)
 
 ohe_prof = pp.OneHotEncoder(categories='auto', sparse=False)
 ohe_prof_data = ohe_prof.fit_transform(df['Profession'].values.reshape(len(df['Profession']), 1))
@@ -152,27 +157,20 @@ sub_df = oheFeature('University Degree', ohe_degree, ohe_degree_data, sub_df)
 ohe_hair_data = ohe_hair.transform(sub_df['Hair Color'].values.reshape(len(sub_df['Hair Color']), 1))
 sub_df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, sub_df)
 
-i = o.values
-# TODO currently values to be replaced are being hard coded - this has to be removed and made dynamic
-i = np.append(i, ['Iraq', 'Iceland', 'Sao Tome & Principe', 'France', 'Cabo Verde', 'Uganda', 'United Kingdom',
-                  'Tanzania', 'Ukraine', 'South Korea', 'Bahamas', 'Luxembourg', 'Italy', 'Vanuatu', 'Saint Lucia',
-                  'South Africa', 'Brunei', 'Turkey', 'Belize', 'Spain', 'Colombia', 'Samoa', 'Kenya', 'Myanmar',
-                  'Maldives', 'Micronesia'])
-sub_df['Country'].replace(i, 'other', inplace=True)
+# Handling the 'other' encoding in Country Feature
+testCountryList = sub_df['Country'].unique()
+encodedCountries = list(set(countryList) - set(countryReplaced))
+testCountryReplace = list(set(testCountryList) - set(encodedCountries))
+sub_df['Country'] = sub_df['Country'].replace(testCountryReplace, 'other')
 
 ohe_country_data = ohe_country.transform(sub_df['Country'].values.reshape(len(sub_df['Country']), 1))
 sub_df = oheFeature('Country', ohe_country, ohe_country_data, sub_df)
 
-ip = op.values
-# TODO currently values to be replaced are being hard coded - this has to be removed and made dynamic
-ip = np.append(ip, ['cashier', 'asset management specialist', 'baggage porter', 'certified it administrator', 'actor',
-                    'asset manager', 'administrative office assistant', 'Brewery Manager', 'administrative manager',
-                    'astronomer', 'Blinds Installer', 'administrative staff analyst', 'aerospace engineer',
-                    'account executive ', 'administrative transportation coordinator', 'accountant',
-                    'air & noise pollution inspector', 'accessibility outreach coordinator', 'brokerage clerk',
-                    'Bar Manager', 'account manager', 'clinical case supervisor', 'apparel patternmaker',
-                    'administrative coordinator'])
-sub_df['Profession'].replace(ip, 'other profession', inplace=True)
+# Handling the 'other profession' encoding in Profession Feature
+testProfessionList = sub_df['Profession'].unique()
+encodedProfession = list(set(professionList) - set(professionReplaced))
+testProfessionReplace = list(set(testProfessionList) - set(encodedProfession))
+sub_df['Profession'] = sub_df['Profession'].replace(testProfessionReplace, 'other profession')
 
 ohe_prof_data = ohe_prof.transform(sub_df['Profession'].values.reshape(len(sub_df['Profession']), 1))
 sub_df = oheFeature('Profession', ohe_prof, ohe_prof_data, sub_df)
