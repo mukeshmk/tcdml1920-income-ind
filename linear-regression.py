@@ -67,7 +67,7 @@ df = openAndHandleUnknowns('tcd ml 2019-20 income prediction training (with labe
 df = dfFillNaN(df)
 df['Income in EUR'] = df['Income in EUR'].abs()
 
-df = dropNumericalOutliers(df)
+# df = dropNumericalOutliers(df)
 
 # TODO this is a temp hack need to find a proper solution
 # idk why if I am not reloading the data set, df.column.values returns the dropped values
