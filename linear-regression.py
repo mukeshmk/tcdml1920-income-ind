@@ -114,8 +114,6 @@ df['Country'].replace(countryReplaced, 'other', inplace=True)
 label_country = pp.LabelEncoder()
 label_country_data = label_country.fit_transform(df['Country'])
 df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
-country_std = df.groupby('Country')['Income in EUR'].std()
-df['Country'] = df['Country'].map(country_std)
 
 # replacing the a small number of least count group values to a common feature 'other profession'
 professionList = df['Profession'].unique()
@@ -126,14 +124,12 @@ df['Profession'].replace(professionReplaced, 'other profession', inplace=True)
 label_prof = pp.LabelEncoder()
 label_prof_data = label_prof.fit_transform(df['Profession'])
 df['Profession'] = pd.DataFrame(label_prof_data, columns=['Profession'])
-prof_std = df.groupby('Profession')['Income in EUR'].std()
-df['Profession'] = df['Profession'].map(prof_std)
 
 del df['Income in EUR']
 # can be modified to used k-fold cross validation
 X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, random_state=0)
 
-model = rfr(n_estimators=100)
+model = rfr(n_estimators=1000)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
@@ -168,7 +164,6 @@ sub_df['Country'] = sub_df['Country'].replace(testCountryReplace, 'other')
 
 label_country_data = label_country.transform(sub_df['Country'])
 sub_df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
-sub_df['Country'] = sub_df['Country'].map(prof_std)
 
 # Handling the 'other profession' encoding in Profession Feature
 testProfessionList = sub_df['Profession'].unique()
@@ -178,7 +173,6 @@ sub_df['Profession'] = sub_df['Profession'].replace(testProfessionReplace, 'othe
 
 label_country_data = label_prof.transform(sub_df['Profession'])
 sub_df['Profession'] = pd.DataFrame(label_country_data, columns=['Profession'])
-sub_df['Profession'] = sub_df['Profession'].map(prof_std)
 
 y_sub = model.predict(sub_df)
 income = pd.DataFrame(y_sub, columns=['Income'])
