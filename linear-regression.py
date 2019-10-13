@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 from scipy import stats
-from sklearn import linear_model
 from sklearn import preprocessing as pp
+from sklearn.ensemble import RandomForestRegressor as rfr
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 
@@ -133,11 +133,10 @@ del df['Income in EUR']
 # can be modified to used k-fold cross validation
 X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, random_state=0)
 
-model = linear_model.LinearRegression()
+model = rfr(n_estimators=100)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
-print('Coefficients: \n', model.coef_)
 print("RMSE: %.2f" % np.sqrt(mean_squared_error(y_test, y_pred)))
 print('Variance score: %.2f' % r2_score(y_test, y_pred))
 
