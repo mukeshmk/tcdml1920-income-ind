@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 from scipy import stats
-from sklearn import linear_model
 from sklearn import preprocessing as pp
+from sklearn.ensemble import RandomForestRegressor as rfr
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 
@@ -79,7 +79,7 @@ os.remove('temp-file.csv')
 y = df['Income in EUR']
 # features being considered for linear regression
 df = df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color', 'Body Height [cm]',
-         'Country', 'Size of City', 'Profession']]
+         'Country', 'Size of City', 'Profession', 'Income in EUR']]
 # need to reconsider using features like 'Hair Color', 'Wears Glasses' and 'Body Height [cm]',
 # these might be totally unnecessary features in predicting the income.
 
@@ -106,15 +106,14 @@ ohe_hair_data = ohe_hair.fit_transform(df['Hair Color'].values.reshape(len(df['H
 df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, df)
 
 # replacing the a small number of least count group values to a common feature 'other'
-
 countryList = df['Country'].unique()
 countryReplaced = df.groupby('Country').count()
 countryReplaced = countryReplaced[countryReplaced['Age'] < 3].index
 df['Country'].replace(countryReplaced, 'other', inplace=True)
 
-ohe_country = pp.OneHotEncoder(categories='auto', sparse=False)
-ohe_country_data = ohe_country.fit_transform(df['Country'].values.reshape(len(df['Country']), 1))
-df = oheFeature('Country', ohe_country, ohe_country_data, df)
+label_country = pp.LabelEncoder()
+label_country_data = label_country.fit_transform(df['Country'])
+df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
 
 # replacing the a small number of least count group values to a common feature 'other profession'
 professionList = df['Profession'].unique()
@@ -122,18 +121,18 @@ professionReplaced = df.groupby('Profession').count()
 professionReplaced = professionReplaced[professionReplaced['Age'] < 3].index
 df['Profession'].replace(professionReplaced, 'other profession', inplace=True)
 
-ohe_prof = pp.OneHotEncoder(categories='auto', sparse=False)
-ohe_prof_data = ohe_prof.fit_transform(df['Profession'].values.reshape(len(df['Profession']), 1))
-df = oheFeature('Profession', ohe_prof, ohe_prof_data, df)
+label_prof = pp.LabelEncoder()
+label_prof_data = label_prof.fit_transform(df['Profession'])
+df['Profession'] = pd.DataFrame(label_prof_data, columns=['Profession'])
 
+del df['Income in EUR']
 # can be modified to used k-fold cross validation
 X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, random_state=0)
 
-model = linear_model.LinearRegression()
+model = rfr(n_estimators=1000)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
-print('Coefficients: \n', model.coef_)
 print("RMSE: %.2f" % np.sqrt(mean_squared_error(y_test, y_pred)))
 print('Variance score: %.2f' % r2_score(y_test, y_pred))
 
@@ -163,8 +162,8 @@ encodedCountries = list(set(countryList) - set(countryReplaced))
 testCountryReplace = list(set(testCountryList) - set(encodedCountries))
 sub_df['Country'] = sub_df['Country'].replace(testCountryReplace, 'other')
 
-ohe_country_data = ohe_country.transform(sub_df['Country'].values.reshape(len(sub_df['Country']), 1))
-sub_df = oheFeature('Country', ohe_country, ohe_country_data, sub_df)
+label_country_data = label_country.transform(sub_df['Country'])
+sub_df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
 
 # Handling the 'other profession' encoding in Profession Feature
 testProfessionList = sub_df['Profession'].unique()
@@ -172,8 +171,8 @@ encodedProfession = list(set(professionList) - set(professionReplaced))
 testProfessionReplace = list(set(testProfessionList) - set(encodedProfession))
 sub_df['Profession'] = sub_df['Profession'].replace(testProfessionReplace, 'other profession')
 
-ohe_prof_data = ohe_prof.transform(sub_df['Profession'].values.reshape(len(sub_df['Profession']), 1))
-sub_df = oheFeature('Profession', ohe_prof, ohe_prof_data, sub_df)
+label_country_data = label_prof.transform(sub_df['Profession'])
+sub_df['Profession'] = pd.DataFrame(label_country_data, columns=['Profession'])
 
 y_sub = model.predict(sub_df)
 income = pd.DataFrame(y_sub, columns=['Income'])
