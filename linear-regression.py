@@ -63,23 +63,21 @@ def oheFeature(feature, encoder, data, df):
 
 
 df = openAndHandleUnknowns('tcd ml 2019-20 income prediction training (with labels).csv')
+sub_df = openAndHandleUnknowns('tcd ml 2019-20 income prediction test (without labels).csv')
 
 df = dfFillNaN(df)
+sub_df = dfFillNaN(sub_df)
+
 df['Income in EUR'] = df['Income in EUR'].abs()
-
-# df = dropNumericalOutliers(df)
-
-# TODO this is a temp hack need to find a proper solution
-# idk why if I am not reloading the data set, df.column.values returns the dropped values
-# this cases issues with ohe as it returns NaN's
-df.to_csv('temp-file.csv', index=False)
-df = pd.read_csv('temp-file.csv')
-os.remove('temp-file.csv')
-
 y = df['Income in EUR']
+instance = pd.DataFrame(sub_df['Instance'], columns=['Instance'])
+
 # features being considered for linear regression
-df = df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color', 'Body Height [cm]',
-         'Country', 'Size of City', 'Profession', 'Income in EUR']]
+features = ['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color',
+            'Body Height [cm]', 'Country', 'Size of City', 'Profession']
+
+df = df[features + ['Income in EUR']]
+sub_df = sub_df[features]
 # need to reconsider using features like 'Hair Color', 'Wears Glasses' and 'Body Height [cm]',
 # these might be totally unnecessary features in predicting the income.
 
@@ -89,21 +87,34 @@ df = df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses'
 yor_scalar = pp.StandardScaler()
 df['Year of Record'] = yor_scalar.fit_transform(df['Year of Record'].values.reshape(-1, 1))
 
+sub_df['Year of Record'] = yor_scalar.transform(sub_df['Year of Record'].values.reshape(-1, 1))
+
 age_scalar = pp.StandardScaler()
 df['Age'] = age_scalar.fit_transform(df['Age'].values.reshape(-1, 1))
+
+sub_df['Age'] = age_scalar.transform(sub_df['Age'].values.reshape(-1, 1))
 
 # One Hot Encoding
 ohe_gender = pp.OneHotEncoder(categories='auto', sparse=False)
 ohe_gender_data = ohe_gender.fit_transform(df['Gender'].values.reshape(len(df['Gender']), 1))
 df = oheFeature('Gender', ohe_gender, ohe_gender_data, df)
 
+ohe_gender_data = ohe_gender.transform(sub_df['Gender'].values.reshape(len(sub_df['Gender']), 1))
+sub_df = oheFeature('Gender', ohe_gender, ohe_gender_data, sub_df)
+
 ohe_degree = pp.OneHotEncoder(categories='auto', sparse=False)
 ohe_degree_data = ohe_degree.fit_transform(df['University Degree'].values.reshape(len(df['University Degree']), 1))
 df = oheFeature('University Degree', ohe_degree, ohe_degree_data, df)
 
+ohe_degree_data = ohe_degree.transform(sub_df['University Degree'].values.reshape(len(sub_df['University Degree']), 1))
+sub_df = oheFeature('University Degree', ohe_degree, ohe_degree_data, sub_df)
+
 ohe_hair = pp.OneHotEncoder(categories='auto', sparse=False, handle_unknown='ignore')
 ohe_hair_data = ohe_hair.fit_transform(df['Hair Color'].values.reshape(len(df['Hair Color']), 1))
 df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, df)
+
+ohe_hair_data = ohe_hair.transform(sub_df['Hair Color'].values.reshape(len(sub_df['Hair Color']), 1))
+sub_df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, sub_df)
 
 # replacing the a small number of least count group values to a common feature 'other'
 countryList = df['Country'].unique()
@@ -115,6 +126,15 @@ label_country = pp.LabelEncoder()
 label_country_data = label_country.fit_transform(df['Country'])
 df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
 
+# Handling the 'other' encoding in Country Feature
+testCountryList = sub_df['Country'].unique()
+encodedCountries = list(set(countryList) - set(countryReplaced))
+testCountryReplace = list(set(testCountryList) - set(encodedCountries))
+sub_df['Country'] = sub_df['Country'].replace(testCountryReplace, 'other')
+
+label_country_data = label_country.transform(sub_df['Country'])
+sub_df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
+
 # replacing the a small number of least count group values to a common feature 'other profession'
 professionList = df['Profession'].unique()
 professionReplaced = df.groupby('Profession').count()
@@ -125,46 +145,6 @@ label_prof = pp.LabelEncoder()
 label_prof_data = label_prof.fit_transform(df['Profession'])
 df['Profession'] = pd.DataFrame(label_prof_data, columns=['Profession'])
 
-del df['Income in EUR']
-# can be modified to used k-fold cross validation
-X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, random_state=0)
-
-model = rfr(n_estimators=1000)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-print("RMSE: %.2f" % np.sqrt(mean_squared_error(y_test, y_pred)))
-print('Variance score: %.2f' % r2_score(y_test, y_pred))
-
-##################################################################################################################
-# Reading unlabeled instances!
-sub_df = openAndHandleUnknowns('tcd ml 2019-20 income prediction test (without labels).csv')
-sub_df = dfFillNaN(sub_df)
-instance = pd.DataFrame(sub_df['Instance'], columns=['Instance'])
-sub_df = sub_df[['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glasses', 'Hair Color',
-                 'Body Height [cm]', 'Country', 'Size of City', 'Profession']]
-
-sub_df['Year of Record'] = yor_scalar.transform(sub_df['Year of Record'].values.reshape(-1, 1))
-sub_df['Age'] = age_scalar.transform(sub_df['Age'].values.reshape(-1, 1))
-
-ohe_gender_data = ohe_gender.transform(sub_df['Gender'].values.reshape(len(sub_df['Gender']), 1))
-sub_df = oheFeature('Gender', ohe_gender, ohe_gender_data, sub_df)
-
-ohe_degree_data = ohe_degree.transform(sub_df['University Degree'].values.reshape(len(sub_df['University Degree']), 1))
-sub_df = oheFeature('University Degree', ohe_degree, ohe_degree_data, sub_df)
-
-ohe_hair_data = ohe_hair.transform(sub_df['Hair Color'].values.reshape(len(sub_df['Hair Color']), 1))
-sub_df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, sub_df)
-
-# Handling the 'other' encoding in Country Feature
-testCountryList = sub_df['Country'].unique()
-encodedCountries = list(set(countryList) - set(countryReplaced))
-testCountryReplace = list(set(testCountryList) - set(encodedCountries))
-sub_df['Country'] = sub_df['Country'].replace(testCountryReplace, 'other')
-
-label_country_data = label_country.transform(sub_df['Country'])
-sub_df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
-
 # Handling the 'other profession' encoding in Profession Feature
 testProfessionList = sub_df['Profession'].unique()
 encodedProfession = list(set(professionList) - set(professionReplaced))
@@ -174,6 +154,18 @@ sub_df['Profession'] = sub_df['Profession'].replace(testProfessionReplace, 'othe
 label_country_data = label_prof.transform(sub_df['Profession'])
 sub_df['Profession'] = pd.DataFrame(label_country_data, columns=['Profession'])
 
+del df['Income in EUR']
+# can be modified to used k-fold cross validation
+X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, random_state=0)
+
+model = rfr(n_estimators=100)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+
+print("RMSE: %.2f" % np.sqrt(mean_squared_error(y_test, y_pred)))
+print('Variance score: %.2f' % r2_score(y_test, y_pred))
+
+##################################################################################################################
 y_sub = model.predict(sub_df)
 income = pd.DataFrame(y_sub, columns=['Income'])
 ans = instance.join(income)
