@@ -1,7 +1,5 @@
-Current preprocessing:
+Current preprocessing and algorithm:
         'RandomForestRegressor'
-
-# NOTE! TargetEncoding OverFit the data and didn't work in Kaggle - changed to LabelEncoding
 
 Finding 'na_values':
         'Year of Record': ['#N/A'],
@@ -30,14 +28,14 @@ Handling NaN:
 
 Feature Modification:
         'Year of Record': Standard Scalar,
-        'Gender': One Hot Encoding - dummy variable handled,
+        'Gender': Target Encoding,
         'Age': Standard Scalar,
-        'Country':  Label Encoding- a small set of countries are being replaced with 'other',
+        'Country':  Target Encoding- a small set of countries are being replaced with 'other',
         'Size of City': Standard Scalar,
-        'Profession': Label Encoding - a small set of professions are being replaced with 'other profession'',
-        'University Degree': One Hot Encoding - dummy variable handled,
+        'Profession': Target Encoding - a small set of professions are being replaced with 'other profession'',
+        'University Degree': Target Encoding - dummy variable handled,
         'Wears Glasses': None - being used,
-        'Hair Color': One Hot Encoding - dummy variable handled,
+        'Hair Color': Target Encoding - dummy variable handled,
         'Body Height [cm]': None - being used,
 
         'Income in EUR': Output Value - Contains negative values which have been converted to positive
@@ -46,5 +44,5 @@ Current Method of evaluation:
         split: test_size = 0.2
 
 Current coefficients, RMSE and Variance score:
-        RMSE:  75081.63
-        Variance score: 0.75
+        RMSE:  58073.44
+        Variance score: 0.85

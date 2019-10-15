@@ -8,8 +8,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 
 
-# Check-out TF-IDF, word2vec, countvectorizer, OneHotEncoder, labelBinarizer, LabelEncoder, OrdinalEncoder
-
 # reading data and handling unknowns
 def openAndHandleUnknowns(fileName):
     return pd.read_csv(fileName, na_values={
@@ -54,7 +52,6 @@ def dropNumericalOutliers(df, z_thresh=3):
 
 # One Hot Encoding
 def oheFeature(feature, encoder, data, df):
-    # data = data[:, 1:]
     ohedf = pd.DataFrame(data, columns=[feature + ': ' + str(i.strip('x0123_')) for i in encoder.get_feature_names()])
     ohedf.drop(ohedf.columns[len(ohedf.columns) - 1], axis=1, inplace=True)
     df = pd.concat([df, ohedf], axis=1)
@@ -124,11 +121,8 @@ features = ['Year of Record', 'Gender', 'Age', 'University Degree', 'Wears Glass
 
 df = df[features + ['Income in EUR']]
 sub_df = sub_df[features]
-# need to reconsider using features like 'Hair Color', 'Wears Glasses' and 'Body Height [cm]',
-# these might be totally unnecessary features in predicting the income.
 
 # Feature modifications
-
 # Standard Scaling
 yor_scalar = pp.StandardScaler()
 df['Year of Record'] = yor_scalar.fit_transform(df['Year of Record'].values.reshape(-1, 1))
@@ -141,8 +135,6 @@ df['Age'] = age_scalar.fit_transform(df['Age'].values.reshape(-1, 1))
 sub_df['Age'] = age_scalar.transform(sub_df['Age'].values.reshape(-1, 1))
 
 # Target Encoding
-# df['Year of Record'], sub_df['Year of Record'] = target_encode(df['Year of Record'], sub_df['Year of Record'], y)
-
 df['Gender'], sub_df['Gender'] = target_encode(df['Gender'], sub_df['Gender'], y)
 
 df['University Degree'], sub_df['University Degree'] = target_encode(df['University Degree'], sub_df['University Degree'], y)
@@ -163,7 +155,6 @@ sub_df['Country'] = sub_df['Country'].replace(testCountryReplace, 'other')
 
 df['Country'], sub_df['Country'] = target_encode(df['Country'], sub_df['Country'], y)
 
-
 # replacing the a small number of least count group values to a common feature 'other profession'
 professionList = df['Profession'].unique()
 professionReplaced = df.groupby('Profession').count()
@@ -179,10 +170,9 @@ sub_df['Profession'] = sub_df['Profession'].replace(testProfessionReplace, 'othe
 df['Profession'], sub_df['Profession'] = target_encode(df['Profession'], sub_df['Profession'], y)
 
 del df['Income in EUR']
-# can be modified to used k-fold cross validation
 X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, random_state=0)
 
-model = rfr(n_estimators=100)
+model = rfr(n_estimators=1000)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
