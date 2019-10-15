@@ -62,6 +62,41 @@ def oheFeature(feature, encoder, data, df):
     return df
 
 
+def add_noise(series, noise_level):
+    return series * (1 + noise_level * np.random.randn(len(series)))
+
+
+def target_encode(trn_series=None, tst_series=None, target=None, min_samples_leaf=1, smoothing=1, noise_level=0):
+    assert len(trn_series) == len(target)
+    assert trn_series.name == tst_series.name
+    temp = pd.concat([trn_series, target], axis=1)
+    # Compute target mean
+    averages = temp.groupby(by=trn_series.name)[target.name].agg(["mean", "count"])
+    # Compute smoothing
+    smoothing = 1 / (1 + np.exp(-(averages["count"] - min_samples_leaf) / smoothing))
+    # Apply average function to all target data
+    prior = target.mean()
+    # The bigger the count the less full_avg is taken into account
+    averages[target.name] = prior * (1 - smoothing) + averages["mean"] * smoothing
+    averages.drop(["mean", "count"], axis=1, inplace=True)
+    # Apply averages to trn and tst series
+    ft_trn_series = pd.merge(
+        trn_series.to_frame(trn_series.name),
+        averages.reset_index().rename(columns={'index': target.name, target.name: 'average'}),
+        on=trn_series.name,
+        how='left')['average'].rename(trn_series.name + '_mean').fillna(prior)
+    # pd.merge does not keep the index so restore it
+    ft_trn_series.index = trn_series.index
+    ft_tst_series = pd.merge(
+        tst_series.to_frame(tst_series.name),
+        averages.reset_index().rename(columns={'index': target.name, target.name: 'average'}),
+        on=tst_series.name,
+        how='left')['average'].rename(trn_series.name + '_mean').fillna(prior)
+    # pd.merge does not keep the index so restore it
+    ft_tst_series.index = tst_series.index
+    return add_noise(ft_trn_series, noise_level), add_noise(ft_tst_series, noise_level)
+
+
 df = openAndHandleUnknowns('tcd ml 2019-20 income prediction training (with labels).csv')
 sub_df = openAndHandleUnknowns('tcd ml 2019-20 income prediction test (without labels).csv')
 
@@ -95,26 +130,11 @@ df['Age'] = age_scalar.fit_transform(df['Age'].values.reshape(-1, 1))
 sub_df['Age'] = age_scalar.transform(sub_df['Age'].values.reshape(-1, 1))
 
 # One Hot Encoding
-ohe_gender = pp.OneHotEncoder(categories='auto', sparse=False)
-ohe_gender_data = ohe_gender.fit_transform(df['Gender'].values.reshape(len(df['Gender']), 1))
-df = oheFeature('Gender', ohe_gender, ohe_gender_data, df)
+df['Gender'], sub_df['Gender'] = target_encode(df['Gender'], sub_df['Gender'], y)
 
-ohe_gender_data = ohe_gender.transform(sub_df['Gender'].values.reshape(len(sub_df['Gender']), 1))
-sub_df = oheFeature('Gender', ohe_gender, ohe_gender_data, sub_df)
+df['University Degree'], sub_df['University Degree'] = target_encode(df['University Degree'], sub_df['University Degree'], y)
 
-ohe_degree = pp.OneHotEncoder(categories='auto', sparse=False)
-ohe_degree_data = ohe_degree.fit_transform(df['University Degree'].values.reshape(len(df['University Degree']), 1))
-df = oheFeature('University Degree', ohe_degree, ohe_degree_data, df)
-
-ohe_degree_data = ohe_degree.transform(sub_df['University Degree'].values.reshape(len(sub_df['University Degree']), 1))
-sub_df = oheFeature('University Degree', ohe_degree, ohe_degree_data, sub_df)
-
-ohe_hair = pp.OneHotEncoder(categories='auto', sparse=False, handle_unknown='ignore')
-ohe_hair_data = ohe_hair.fit_transform(df['Hair Color'].values.reshape(len(df['Hair Color']), 1))
-df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, df)
-
-ohe_hair_data = ohe_hair.transform(sub_df['Hair Color'].values.reshape(len(sub_df['Hair Color']), 1))
-sub_df = oheFeature('Hair Color', ohe_hair, ohe_hair_data, sub_df)
+df['Hair Color'], sub_df['Hair Color'] = target_encode(df['Hair Color'], sub_df['Hair Color'], y)
 
 # replacing the a small number of least count group values to a common feature 'other'
 countryList = df['Country'].unique()
@@ -122,18 +142,14 @@ countryReplaced = df.groupby('Country').count()
 countryReplaced = countryReplaced[countryReplaced['Age'] < 3].index
 df['Country'].replace(countryReplaced, 'other', inplace=True)
 
-label_country = pp.LabelEncoder()
-label_country_data = label_country.fit_transform(df['Country'])
-df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
-
 # Handling the 'other' encoding in Country Feature
 testCountryList = sub_df['Country'].unique()
 encodedCountries = list(set(countryList) - set(countryReplaced))
 testCountryReplace = list(set(testCountryList) - set(encodedCountries))
 sub_df['Country'] = sub_df['Country'].replace(testCountryReplace, 'other')
 
-label_country_data = label_country.transform(sub_df['Country'])
-sub_df['Country'] = pd.DataFrame(label_country_data, columns=['Country'])
+df['Country'], sub_df['Country'] = target_encode(df['Country'], sub_df['Country'], y)
+
 
 # replacing the a small number of least count group values to a common feature 'other profession'
 professionList = df['Profession'].unique()
@@ -141,18 +157,13 @@ professionReplaced = df.groupby('Profession').count()
 professionReplaced = professionReplaced[professionReplaced['Age'] < 3].index
 df['Profession'].replace(professionReplaced, 'other profession', inplace=True)
 
-label_prof = pp.LabelEncoder()
-label_prof_data = label_prof.fit_transform(df['Profession'])
-df['Profession'] = pd.DataFrame(label_prof_data, columns=['Profession'])
-
 # Handling the 'other profession' encoding in Profession Feature
 testProfessionList = sub_df['Profession'].unique()
 encodedProfession = list(set(professionList) - set(professionReplaced))
 testProfessionReplace = list(set(testProfessionList) - set(encodedProfession))
 sub_df['Profession'] = sub_df['Profession'].replace(testProfessionReplace, 'other profession')
 
-label_country_data = label_prof.transform(sub_df['Profession'])
-sub_df['Profession'] = pd.DataFrame(label_country_data, columns=['Profession'])
+df['Profession'], sub_df['Profession'] = target_encode(df['Profession'], sub_df['Profession'], y)
 
 del df['Income in EUR']
 # can be modified to used k-fold cross validation
