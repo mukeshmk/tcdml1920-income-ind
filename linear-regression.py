@@ -67,6 +67,17 @@ def add_noise(series, noise_level):
 
 
 def target_encode(trn_series=None, tst_series=None, target=None, min_samples_leaf=1, smoothing=1, noise_level=0):
+    temp = pd.concat([trn_series, target], axis=1)
+    # Compute target mean
+    averages = temp.groupby(by=trn_series.name)[target.name].agg(["mean", "count"])
+    # Compute smoothing
+    smoothing = 1 / (1 + np.exp(-(averages["count"] - min_samples_leaf) / smoothing))
+    # Apply average function to all target data
+    prior = target.mean()
+    # The bigger the count the less full_avg is taken into account
+    averages[target.name] = prior * (1 - smoothing) + averages["mean"] * smoothing
+    averages.drop(["mean", "count"], axis=1, inplace=True)
+    # Apply aver
     assert len(trn_series) == len(target)
     assert trn_series.name == tst_series.name
     temp = pd.concat([trn_series, target], axis=1)
@@ -129,7 +140,9 @@ df['Age'] = age_scalar.fit_transform(df['Age'].values.reshape(-1, 1))
 
 sub_df['Age'] = age_scalar.transform(sub_df['Age'].values.reshape(-1, 1))
 
-# One Hot Encoding
+# Target Encoding
+# df['Year of Record'], sub_df['Year of Record'] = target_encode(df['Year of Record'], sub_df['Year of Record'], y)
+
 df['Gender'], sub_df['Gender'] = target_encode(df['Gender'], sub_df['Gender'], y)
 
 df['University Degree'], sub_df['University Degree'] = target_encode(df['University Degree'], sub_df['University Degree'], y)
